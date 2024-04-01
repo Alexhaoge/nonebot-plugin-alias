@@ -1,12 +1,12 @@
 import shlex
 from expandvars import expand, ExpandvarsException
 
-from .alias_list import aliases
+from .alias_list import AliasList
 
 
-def parse_msg(msg: str, id: str) -> str:
-    alias_all = aliases.get_alias_all(id)
-    alias_all_gl = aliases.get_alias_all("global")
+async def parse_msg(msg: str, id: str) -> str:
+    alias_all = await AliasList.get_alias_all(id)
+    alias_all_gl = await AliasList.get_alias_all("global")
     alias_all_gl.update(alias_all)
     for name in sorted(alias_all_gl, reverse=True):
         if msg.startswith(name):

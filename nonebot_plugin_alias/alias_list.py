@@ -1,61 +1,92 @@
-import json
-from pathlib import Path
-
-data_path = Path("data/alias")
-if not data_path.exists():
-    data_path.mkdir(parents=True)
+import uuid
+from sqlalchemy import select
+from .utils import use_ac_session, use_redis_client
+from .orm import AliasORM
 
 
 class AliasList:
-    def __init__(self, path: Path):
-        self.path = path
-        self.list = self._load_alias()
 
-    def _load_alias(self) -> dict:
-        if self.path.exists():
-            return json.load(self.path.open("r", encoding="utf-8"))
-        else:
-            return {}
+    @staticmethod
+    async def _load_alias_from_db():
+        alist = dict()
+        async with use_ac_session() as session:
+            stmt = select(AliasORM)
+            async for x in await session.stream_scalars(stmt):
+                if x.id in alist:
+                    alist[x.id][x.name] = x.command
+                else:
+                    alist[x.id] = dict()
+        async with use_redis_client() as client:
+            for id in alist:
+                await client.hset(f'alias_{id}', mapping=alist[id])
+        return alist
+    
+    # @classmethod
+    # async def create(cls):
+    #     return cls(await cls._load_alias())
 
-    def _dump_alias(self) -> bool:
-        json.dump(
-            self.list,
-            self.path.open("w", encoding="utf-8"),
-            indent=4,
-            separators=(",", ": "),
-            ensure_ascii=False,
-        )
+    @staticmethod
+    async def add_alias(id: str, name: str, command: str) -> bool:
+        async with use_ac_session() as session:
+            stmt = select(AliasORM).where(AliasORM.id==id, AliasORM.name==name).with_for_update(read=True)
+            exsist_alias = (await session.execute(stmt)).first()
+            if exsist_alias:
+                exsist_alias[0].command = command
+            else:
+                session.add(AliasORM(id, name, command))
+            await session.commit()
+        
+        async with use_redis_client() as client:
+            await client.hset(f'alias_{id}', name, command)
+
         return True
 
-    def add_alias(self, id: str, name: str, command: str) -> bool:
-        if id not in self.list:
-            self.list[id] = {}
-        self.list[id][name] = command
-        return self._dump_alias()
+    @staticmethod
+    async def del_alias(self, id: str, name: str) -> bool:
+        async with use_ac_session() as session:
+            stmt = select(AliasORM).where(AliasORM.id==id, AliasORM.name==name).with_for_update(read=True)
+            alias_r = (await session.execute(stmt)).first()
+            if alias_r:
+                await session.delete(alias_r[0])
+                await session.commit()
+        
+        async with use_redis_client() as client:
+            del_num = await client.hdel(f'alias_{id}', name)
+        return del_num
 
-    def del_alias(self, id: str, name: str) -> bool:
-        if id not in self.list:
-            return False
-        self.list[id].pop(name, "")
-        if not self.list[id]:
-            self.list.pop(id, {})
-        return self._dump_alias()
+    @staticmethod
+    async def del_alias_all(id: str) -> bool:
+        async with use_redis_client() as client:
+            del_num = await client.delete(f'alias_{id}')
 
-    def del_alias_all(self, id: str) -> bool:
-        self.list.pop(id, {})
-        return self._dump_alias()
+        async with use_ac_session() as session:
+            stmt = select(AliasORM).where(AliasORM.id==id).with_for_update(read=True)
+            async for x in await session.stream_scalars(stmt):
+                await session.delete(x)
+            await session.commit()
+        return True
 
-    def get_alias(self, id: str, name: str) -> str:
-        if id not in self.list:
-            return ""
-        if name not in self.list[id]:
-            return ""
-        return self.list[id][name]
+    @staticmethod
+    async def get_alias(id: str, name: str) -> str:
+        async with use_redis_client() as client:
+            command = await client.hget(f'alias_{id}', name)
+        return command
 
-    def get_alias_all(self, id: str) -> dict:
-        if id not in self.list:
-            return {}
-        return self.list[id].copy()
+    @staticmethod
+    async def get_alias_all(self, id: str) -> dict:
+        async with use_redis_client() as client:
+            commands = await client.hgetall(f'alias_{id}')
+        return commands
 
+# class AliasFactory():
+#     _alias = None
 
-aliases = AliasList(data_path / "aliases.json")
+#     @classmethod
+#     async def get_alias(cls):
+#         if cls._alias is None:
+#             cls._alias = await AliasList.create()
+#         return cls._alias
+
+# aliases = AliasList(data_path / "aliases.json")
+
+__all__ = ['AliasList']

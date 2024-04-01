@@ -6,7 +6,9 @@ from nonebot.params import ShellCommandArgs
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent, PrivateMessageEvent
 
 from .handler import handle, get_id
-from .alias_list import aliases
+from .alias_list import AliasList
+from .config import conf
+from . import orm_migrations
 
 __plugin_meta__ = PluginMetadata(
     name="命令别名",
@@ -23,6 +25,7 @@ __plugin_meta__ = PluginMetadata(
         "example": "alias '喷水'='echo 呼风唤雨'\nunalias '喷水'",
         "author": "meetwq <meetwq@gmail.com>",
         "version": "0.3.2",
+        "orm_version_location": orm_migrations
     },
 )
 
@@ -47,14 +50,14 @@ async def _(bot: Bot, event: MessageEvent, args: Namespace = ShellCommandArgs())
     gl = args.globally
     id = "global" if gl else get_id(event)
     word = "全局别名" if gl else "别名"
+    alias_all = await AliasList.get_alias_all(id)
 
     if args.print:
         message = "全局别名：" if gl else ""
-        alias_all = aliases.get_alias_all(id)
         for name in sorted(alias_all):
             message += f"\n{name}='{alias_all[name]}'"
         if not gl:
-            alias_all_gl = aliases.get_alias_all("global")
+            alias_all_gl = await AliasList.get_alias_all("global")
             if alias_all_gl:
                 message += "\n全局别名："
                 for name in sorted(alias_all_gl):
@@ -77,13 +80,17 @@ async def _(bot: Bot, event: MessageEvent, args: Namespace = ShellCommandArgs())
 
     message = ""
     names = args.names
+    if len(names) + len(alias_all) > conf.max_local_alias:
+        await alias.finish(f"自定义别名最多{conf.max_local_alias}个")
     for name in names:
         if "=" in name:
             name, command = name.split("=", 1)
-            if name and command and aliases.add_alias(id, name, command):
-                message += f"成功添加{word}：{name}='{command}'\n"
+            if name and command:
+                res = await AliasList.add_alias(id, name, command)
+                if res:
+                    message += f"成功添加{word}：{name}='{command}'\n"
         else:
-            command = aliases.get_alias(id, name)
+            command = await AliasList.get_alias(id, name)
             if command:
                 message += f"{name}='{command}'\n"
             else:
@@ -111,14 +118,17 @@ async def _(bot: Bot, event: MessageEvent, args: Namespace = ShellCommandArgs())
         await alias.finish("管理别名需要群管理员权限！")
 
     if args.all:
-        if aliases.del_alias_all(id):
+        res = await AliasList.del_alias_all(id)
+        if res:
             await unalias.finish(f"成功删除所有{word}")
 
     message = ""
     names = args.names
     for name in names:
-        if aliases.get_alias(id, name):
-            if aliases.del_alias(id, name):
+        exsist_alias = await AliasList.get_alias(id, name)
+        if exsist_alias:
+            res = await AliasList.del_alias(id, name)
+            if res:
                 message += f"成功删除{word}：{name}\n"
         else:
             message += f"不存在的{word}：{name}\n"

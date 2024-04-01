@@ -14,7 +14,7 @@ async def handle(event: MessageEvent):
         return
 
     try:
-        msg = parse_msg(msg, get_id(event))
+        msg = await parse_msg(msg, get_id(event))
         event.message[0].data["text"] = msg
     except:
         return
