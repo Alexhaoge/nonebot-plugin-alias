@@ -7,7 +7,7 @@ from .orm import AliasORM
 class AliasList:
 
     @staticmethod
-    async def _load_alias_from_db():
+    async def load_alias_from_db():
         alist = dict()
         async with use_ac_session() as session:
             stmt = select(AliasORM)
@@ -23,7 +23,7 @@ class AliasList:
     
     # @classmethod
     # async def create(cls):
-    #     return cls(await cls._load_alias())
+    #     return cls(await cls.load_alias_from_db())
 
     @staticmethod
     async def add_alias(id: str, name: str, command: str) -> bool:

@@ -1,5 +1,5 @@
 from argparse import Namespace
-from nonebot import on_shell_command
+from nonebot import on_shell_command, get_driver
 from nonebot.rule import ArgumentParser
 from nonebot.plugin import PluginMetadata
 from nonebot.params import ShellCommandArgs
@@ -44,6 +44,7 @@ unalias_parser.add_argument("names", nargs="*")
 
 unalias = on_shell_command("unalias", parser=unalias_parser, priority=10)
 
+get_driver().on_startup(AliasList.load_alias_from_db)
 
 @alias.handle()
 async def _(bot: Bot, event: MessageEvent, args: Namespace = ShellCommandArgs()):
