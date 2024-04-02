@@ -18,7 +18,8 @@ class AliasList:
                     alist[x.id] = dict()
         async with use_redis_client() as client:
             for id in alist:
-                await client.hset(f'alias_{id}', mapping=alist[id])
+                if len(alist[id]):
+                    await client.hmset(f'alias_{id}', alist[id])
         return alist
     
     # @classmethod

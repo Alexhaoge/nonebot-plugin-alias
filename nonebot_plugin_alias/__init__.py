@@ -1,4 +1,7 @@
 from argparse import Namespace
+from nonebot import require
+require("nonebot_plugin_orm")
+
 from nonebot import on_shell_command, get_driver
 from nonebot.rule import ArgumentParser
 from nonebot.plugin import PluginMetadata

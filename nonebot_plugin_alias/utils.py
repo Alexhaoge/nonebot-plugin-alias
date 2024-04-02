@@ -41,7 +41,7 @@ async def use_redis_client():
     try:
         yield _redis_current_client.get()
     except LookupError:
-        redis_pool = redis.ConnectionPool.from_url(conf.redis_url, decode_responses=True)
+        redis_pool = redis.ConnectionPool.from_url(conf().redis_url, decode_responses=True)
         redis_client = redis.Redis(connection_pool=redis_pool, decode_responses=True)
         logger.trace("Redis connection was created")
         token_pool = _redis_current_connection_pool.set(redis_pool)

@@ -13,9 +13,9 @@ import json
 
 # revision identifiers, used by Alembic.
 revision: str = '13da430528b1'
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = ("nonebot_plugin_alias",)
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade(name: str = "") -> None:
@@ -42,7 +42,6 @@ def upgrade(name: str = "") -> None:
 def downgrade(name: str = "") -> None:
     if name:
         return
-    
     alias = dict()
     bind = op.get_bind()
     cursor = bind.execute("SELECT id, name, command FROM alias_alias;")
