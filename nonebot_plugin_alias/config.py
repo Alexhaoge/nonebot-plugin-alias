@@ -6,7 +6,7 @@ from pydantic import Field, BaseSettings
 class Config(BaseSettings):
     alias_data_path: str = "data/alias"
     redis_url: str = 'redis://localhost'
-    max_local_alias: int = 25
+    max_local_alias: int = 30
     class Config:
         extra = "ignore"
 

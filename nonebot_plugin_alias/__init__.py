@@ -84,8 +84,8 @@ async def _(bot: Bot, event: MessageEvent, args: Namespace = ShellCommandArgs())
 
     message = ""
     names = args.names
-    if len(names) + len(alias_all) > conf.max_local_alias:
-        await alias.finish(f"自定义别名最多{conf.max_local_alias}个")
+    if (not gl) and len(names) + len(alias_all) > conf().max_local_alias:
+        await alias.finish(f"自定义别名最多{conf().max_local_alias}个")
     for name in names:
         if "=" in name:
             name, command = name.split("=", 1)

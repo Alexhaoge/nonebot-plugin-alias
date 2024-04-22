@@ -43,7 +43,7 @@ class AliasList:
         return True
 
     @staticmethod
-    async def del_alias(self, id: str, name: str) -> bool:
+    async def del_alias(id: str, name: str) -> bool:
         async with use_ac_session() as session:
             stmt = select(AliasORM).where(AliasORM.id==id, AliasORM.name==name).with_for_update(read=True)
             alias_r = (await session.execute(stmt)).first()
@@ -74,7 +74,7 @@ class AliasList:
         return command
 
     @staticmethod
-    async def get_alias_all(self, id: str) -> dict:
+    async def get_alias_all(id: str) -> dict:
         async with use_redis_client() as client:
             commands = await client.hgetall(f'alias_{id}')
         return commands
