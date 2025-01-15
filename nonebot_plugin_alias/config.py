@@ -1,7 +1,7 @@
 from typing import Literal, Optional
 
 from nonebot import get_driver
-from pydantic import Field, BaseSettings
+from pydantic.v1 import Field, BaseSettings
 
 class Config(BaseSettings):
     alias_data_path: str = "data/alias"
